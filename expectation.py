@@ -18,7 +18,7 @@ def normal_cond_dens(sigma, residuals):
     conditional_density = np.zeros([regimes, obs])  # y_t|s_t = j conditional density of Y for a given state
     for r in range(regimes):
         conditional_density[r, :] = multivariate_normal(mean=None,
-                                                        cov=sigma[:, :, r]).pdf(residuals.T).T
+                                                        cov=sigma[:, :, r]).logpdf(residuals.T).T
 
     return conditional_density
 

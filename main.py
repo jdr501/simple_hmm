@@ -32,11 +32,11 @@ for i in range(10):
     print(smoothed_marginal_probabilities)
     st_prob = initial_probabilities(trans_prob_temp).reshape(-1, 1)
 '''
-draws = 10
+draws = 1
 b0_list = []
 
 for i in range(draws):
-    b0 = np.random.normal(0, 0.1, size=(4, 4))
+    b0 = np.random.normal(0.001, 2, size=(4, 4))
     b0_list.append(b0)
 
 
@@ -50,6 +50,7 @@ initialize.run_initialization()
 residuals = initialize.u_hat
 sigma = initialize.sigmas
 
+print(sigma)
 regimes = 2
 k_vars = 4
 
@@ -61,20 +62,27 @@ delta_yt = initialize.delta_y_t
 zt = initialize.z_t_1
 
 
-initial_guess = np.ones([k_vars*k_vars+(regimes-1)*k_vars, 1])/1.001
+initial_guess = np.ones([k_vars*k_vars+(regimes-1)*k_vars, 1])
 
 initial_guess[:k_vars*k_vars, [0]] = b_mat.T.reshape(-1,1)
 
 initial_guess = np.squeeze(initial_guess)
-loglikelihood, smoothed_prob, joint_smoothed_prob = expectation_run(sigma,
-                                                                    residuals,
-                                                                    start_prob,
-                                                                    transition_prob)
-
-
-result = optimization_run(smoothed_prob, joint_smoothed_prob, initial_guess, residuals, zt, delta_yt)
-
-print(result[0])
-print(result[1])
-print(result[5][:, :, 0])
-print(result[5][:, :, 1])
+initial_guess = initial_guess + np.random.normal(1, 1, size=initial_guess.shape)
+for i in range(10):
+    loglikelihood, smoothed_prob, joint_smoothed_prob = expectation_run(sigma,
+                                                                        residuals,
+                                                                        start_prob,
+                                                                        transition_prob)
+    print(f'this is  ll :{loglikelihood}')
+    transition_prob, \
+        start_prob, \
+        initial_guess, \
+        b_matrix, \
+        lam_m,\
+        sigma,\
+        wls_params, residuals = optimization_run(smoothed_prob, joint_smoothed_prob, initial_guess, residuals, zt, delta_yt)
+    print(transition_prob)
+print(residuals)
+print(sigma[:, :, 0])
+print(sigma[:, :, 1])
+print(smoothed_prob)
