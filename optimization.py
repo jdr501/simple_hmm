@@ -3,6 +3,8 @@ from statsmodels.tools.sm_exceptions import EstimationWarning
 import numpy as np
 from scipy.optimize import minimize
 from expectation import normal_cond_dens
+from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+
 
 def optimization_run(smoothed_prob, joint_smoothed_prob,
                      initial_guess, residuals, zt, delta_yt):
@@ -37,8 +39,8 @@ def sigma_likelihood(x, residuals, smoothed_prob):
     regimes = smoothed_prob.shape[0]
     b_matrix, lam_m = reconstitute_b_lambda(x, k_vars, regimes)
     sigma = sigma_estimate(b_matrix, lam_m)
-    condi_dens = normal_cond_dens(sigma,residuals)
-    weighted_dens  = condi_dens*smoothed_prob
+    condi_dens = normal_cond_dens(sigma, residuals)
+    weighted_dens = condi_dens * smoothed_prob
     # weighted squared sum of residuals
     weighted_sum_res = np.zeros([k_vars, k_vars, regimes])
     for regime in range(regimes):
@@ -53,7 +55,7 @@ def sigma_likelihood(x, residuals, smoothed_prob):
     b_matrix_trans_inv = np.linalg.pinv(b_matrix.T)
     b_matrix_inv = np.linalg.pinv(b_matrix)
 
-    term_1 = obs * np.log(abs(np.linalg.det(b_matrix))) / 2 # TODO change back to original sum(smoothed_prob[0, :])
+    term_1 = obs * np.log(abs(np.linalg.det(b_matrix))) / 2  # TODO change back to original sum(smoothed_prob[0, :])
     term_2 = np.trace(b_matrix_trans_inv @ b_matrix_inv @ weighted_sum_res[:, :, 0]) / 2
     term_3 = 0
     term_4 = 0
@@ -107,8 +109,9 @@ def numerical_opt_b_lambda(initial_guess, residuals, smoothed_prob):
         else:
             bound_list.append((0.01, None))
     bound_list = tuple(bound_list)
-    # input_args = residuals, smoothed_prob
-    opt ={'maxiter': 10000}
+
+    opt = {'maxiter': 10000}
+
     b_lambda_result = minimize(sigma_likelihood,
                                initial_guess,
                                args=input_args,
@@ -119,9 +122,20 @@ def numerical_opt_b_lambda(initial_guess, residuals, smoothed_prob):
 
     print(b_lambda_result.message)
     print(f'this is the function value: {b_lambda_result.fun}')
+    print(b_lambda_result.x)
     b_matrix, lam_m = reconstitute_b_lambda(b_lambda_result.x, k_vars, regimes)
     sigma = sigma_estimate(b_matrix, lam_m)
     return b_lambda_result.x, b_matrix, lam_m, sigma
+
+
+def jacobian(x, sigma, residuals):
+    input_args = (sigma, residuals)
+    return approx_fprime_cs(x, sigma_likelihood, args=input_args)
+
+
+def hessian(x, sigma, residuals):
+    input_args = (sigma, residuals)
+    return approx_hess_cs(x, sigma_likelihood, args=input_args)
 
 
 def wls_estimate(sigma, zt, delta_yt, smoothed_prob):
@@ -173,7 +187,7 @@ def em_regime_transition(smoothed_marginal_probabilities, smoothed_joint_probabi
 
     regime_transition = np.zeros((k_regimes, 1))
     for i in range(k_regimes):  # S_{t_1}
-        for j in range(k_regimes-1):  # S_t
+        for j in range(k_regimes - 1):  # S_t
             regime_transition[i, j] = (
                     np.sum(smoothed_joint_probabilities[j, i]) /
                     np.sum(smoothed_marginal_probabilities[i]))
@@ -210,7 +224,7 @@ def regime_transition_matrix(regime_transition, k_regimes):
     it is certain that from one regime (j) you will transition to *some
     other regime*).
     """
-    #transition_matrix = regime_transition.reshape(k_regimes,k_regimes,1)
+    # transition_matrix = regime_transition.reshape(k_regimes,k_regimes,1)
     if True:
         transition_matrix = np.zeros((k_regimes, k_regimes, 1), dtype=np.float64)
         transition_matrix[:-1, :, 0] = np.reshape(regime_transition,

@@ -6,6 +6,7 @@ import codecs
 import multiprocessing
 from expectation import *
 from optimization import *
+import matplotlib.pyplot as plt
 
 st_prob = np.array([0.3, 0.7], dtype=np.float64).reshape(-1, 1)
 trans_prob = np.array([[0.7, 0.3], [0.3, 0.7]])  # np.ones([2,2], dtype=np.float64)/2
@@ -36,7 +37,7 @@ draws = 1
 b0_list = []
 
 for i in range(draws):
-    b0 = np.random.normal(0.001, 2, size=(4, 4))
+    b0 = np.random.normal(0.01, 4, size=(4, 4))
     b0_list.append(b0)
 
 
@@ -68,7 +69,7 @@ initial_guess[:k_vars*k_vars, [0]] = b_mat.T.reshape(-1,1)
 
 initial_guess = np.squeeze(initial_guess)
 initial_guess = initial_guess + np.random.normal(1, 1, size=initial_guess.shape)
-for i in range(10):
+for i in range(200):
     loglikelihood, smoothed_prob, joint_smoothed_prob = expectation_run(sigma,
                                                                         residuals,
                                                                         start_prob,
@@ -86,3 +87,10 @@ print(residuals)
 print(sigma[:, :, 0])
 print(sigma[:, :, 1])
 print(smoothed_prob)
+
+import pandas as pd
+
+df2 = pd.DataFrame()
+df2['smoothed_prob_regime1'] = smoothed_prob[0, :]
+df2['smoothed_prob_regime1'].plot()
+plt.show()
